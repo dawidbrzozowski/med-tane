@@ -6,11 +6,10 @@ import click
 
 class Tane:
 
-    def __init__(self, data_2d, candidates, table_t, dict_partitions, final_list_of_all_dependencies, column_headers,
+    def __init__(self, data_2d, candidates, dict_partitions, final_list_of_all_dependencies, column_headers,
                  row_labels_number):
         self.data_2d = data_2d
         self.candidates = candidates
-        self.t = table_t
         self.dict_partitions = dict_partitions
         self.final_list_of_all_dependencies = final_list_of_all_dependencies
         self.column_headers = column_headers
@@ -153,36 +152,36 @@ class Tane:
         return lower_level
 
     def initialise_stripped_partitions(self, c1):
-        s = [[]] * len(self.t)
+        s_tab = [[]] * self.row_labels_number
+        t_tab = [None] * self.row_labels_number
         for i in range(len(c1)):
             for t in c1[i]:
-                self.t[t] = i
+                t_tab[t] = i
 
-        return s, self.t
+        return s_tab, t_tab
 
     def stripped_product(self, x, y, z):
         c1 = self.dict_partitions[y]
         c2 = self.dict_partitions[z]
         pi = []
 
-        # TODO niepotrzebne self.t
-        s, self.t = self.initialise_stripped_partitions(c1)
+        s_tab, t_tab = self.initialise_stripped_partitions(c1)
 
         for i in range(len(c2)):
             for t in c2[i]:
-                if self.t[t] != 'NULL':
-                    s[self.t[t]] = s[self.t[t]] + [t]
+                if t_tab[t] is not None:
+                    s_tab[t_tab[t]] = s_tab[t_tab[t]] + [t]
                     
             for t in c2[i]:
-                if self.t[t] != 'NULL':
-                    if len(s[self.t[t]]) >= 2:
-                        pi.append(s[self.t[t]])
+                if t_tab[t] is not None:
+                    if len(s_tab[t_tab[t]]) >= 2:
+                        pi.append(s_tab[t_tab[t]])
 
-                    s[self.t[t]] = ''
+                    s_tab[t_tab[t]] = ''
 
         for i in range(len(c1)):
             for t in c1[i]:
-                self.t[t] = 'NULL'
+                t_tab[t] = None
 
         self.dict_partitions[x] = pi
 
@@ -209,13 +208,13 @@ def initialize_tane_from_file(input_file: STRING):
     row_labels_number = len(data_df.index)
     columns_header = list(data_df.columns.values)  # returns ['A', 'B', 'C', 'D', .....]
 
-    table_t = ['NULL'] * row_labels_number  # this is for the table T used in the function stripped_product
+      # this is for the table T used in the function stripped_product
 
     candidates = {'': columns_header[:]}
     dict_partitions = {}  # maps 'stringslikethis' to a list of lists, each of which contains indices
     computeSingletonPartitions(columns_header, data_df, dict_partitions)
 
-    return Tane(data_2d=data_df, candidates=candidates, table_t=table_t, dict_partitions=dict_partitions,
+    return Tane(data_2d=data_df, candidates=candidates, dict_partitions=dict_partitions,
                 final_list_of_all_dependencies=[], column_headers=columns_header, row_labels_number=row_labels_number)
 
 
