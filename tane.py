@@ -36,7 +36,7 @@ class Tane:
             for a in x:
                 x_without_a = x.replace(a, '')
                 attr_candidates.insert(0, set(self.CANDIDATES[x_without_a]))
-            self.CANDIDATES[x] = list(set.intersection(*attr_candidates))  # compute the intersection in line 2 of pseudocode
+            self.CANDIDATES[x] = list(set.intersection(*attr_candidates))
 
         for x in level:
             for a in x:
@@ -46,6 +46,7 @@ class Tane:
                         self.FINAL_LIST_OF_ALL_DEPENDENCIES.append([x.replace(a, ''), a])  # line 6
                         self.CANDIDATES[x].remove(a)  # line 7
 
+                        # TODO do funkcji, bo obrzydliwe
                         listofcols = self.COLUMN_HEADERS[:]
                         for j in x:  # this loop computes R\X
                             if j in listofcols: listofcols.remove(j)
