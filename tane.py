@@ -92,36 +92,55 @@ class Tane:
         for item in stufftobedeletedfromlevel:
             level.remove(item)
 
-    def generate_next_level(self, level):
-        nextlevel = []
-        for i in range(0, len(level)):  # pick an element
-            for j in range(i + 1, len(level)):  # compare it to every element that comes after it.
-                if ((not level[i] == level[j]) and level[i][0:-1] == level[j][0:-1]):  # i.e. line 2 and 3
-                    x = level[i] + level[j][-1]  # line 4
-                    flag = True
-                    for a in x:  # this entire for loop is for the 'for all' check in line 5
-                        if not (x.replace(a, '') in level):
-                            flag = False
-                    if flag == True:
-                        nextlevel.append(x)
-                        self.stripped_product(x, level[i], level[j], self.table_t)  # compute partition of x as pi_y * pi_z (where y is level[i] and z is level[j])
-        return nextlevel
+    def generate_prefix_block(self, level):
+        prefix_block = []
+        for i in range(len(level)):
+            for j in range(i + 1, len(level)):
+                attr1 = level[i]
+                attr2 = level[j]
+                if attr1 != attr2 and attr1[0:-1] == attr2[0:-1]:
+                    prefix_block.append((attr1, attr2))
 
-    def stripped_product(self, x, y, z, table_t):
-        tableS = [''] * len(table_t)
+        return prefix_block
+
+    def is_in_next_level(self, x, level):
+        for a in x:
+            x_without_a = x.replace(a, '')
+            if x_without_a not in level:
+                return False
+
+        return True
+
+    def generate_next_level(self, level):
+        lower_level = []
+        # w naszej implementacji prefix_blocks juz nie zawieraja y == z
+        prefix_blocks = self.generate_prefix_block(level)
+        for k in prefix_blocks:
+            y, z = k
+            # poniewaz y i z naleza do prefix_block, to sa identyczne na l-1 pozycjach
+            x = y + z[-1]
+            if self.is_in_next_level(x, level):
+                lower_level.append(x)
+                self.stripped_product(x, y, z)
+
+        return lower_level
+
+    def stripped_product(self, x, y, z):
+        tableS = [''] * len(self.table_t)
         partitionY = self.DICT_PARTITIONS[
             ''.join(sorted(y))]  # partitionY is a list of lists, each list is an equivalence class
         partitionZ = self.DICT_PARTITIONS[''.join(sorted(z))]
         partitionofx = []  # line 1
         for i in range(len(partitionY)):  # line 2
             for t in partitionY[i]:  # line 3
-                table_t[t] = i
+                self.table_t[t] = i
             tableS[i] = ''  # line 4
         for i in range(len(partitionZ)):  # line 5
             for t in partitionZ[i]:  # line 6
-                if (not (table_t[t] == 'NULL')):  # line 7
-                    tableS[table_t[t]] = sorted(list(set(tableS[table_t[t]]) | set([t])))
+                if (not (self.table_t[t] == 'NULL')):  # line 7
+                    tableS[self.table_t[t]] = sorted(list(set(tableS[self.table_t[t]]) | set([t])))
             for t in partitionZ[i]:  # line 8
+                table_t = self.table_t
                 if (not (table_t[t] == 'NULL')) and len(tableS[table_t[t]]) >= 2:  # line 9
                     partitionofx.append(tableS[table_t[t]])
                 if not (table_t[t] == 'NULL'): tableS[table_t[t]] = ''  # line 10
@@ -147,6 +166,7 @@ def list_duplicates(seq):
             if len(locs) > 0)
 
 
+
 def initialize_tane_from_file(input_file: STRING):
     DATA_2D = read_csv(input_file)
 
@@ -170,6 +190,7 @@ def initialize_tane_from_file(input_file: STRING):
     type=STRING,
     required=True,
     help="Path to the input file")
+
 def main(input_file: STRING):
     tane = initialize_tane_from_file(input_file)
 
