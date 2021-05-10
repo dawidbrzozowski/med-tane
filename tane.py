@@ -6,53 +6,48 @@ import click
 
 class Tane:
 
-    def __init__(self, data_2d, candidates, table_t, dict_partitions, FINAL_LIST_OF_ALL_DEPENDENCIES, COLUMN_HEADERS, ROW_LABELS_NUMBER):
+    def __init__(self, data_2d, candidates, table_t, dict_partitions, final_list_of_all_dependencies, column_headers, row_labels_number):
         self.data_2d = data_2d
-        self.CANDIDATES = candidates
+        self.candidates = candidates
         self.table_t = table_t
-        self.DICT_PARTITIONS = dict_partitions
-        self.FINAL_LIST_OF_ALL_DEPENDENCIES = FINAL_LIST_OF_ALL_DEPENDENCIES
-        self.COLUMN_HEADERS = COLUMN_HEADERS
-        self.ROW_LABELS_NUMBER = ROW_LABELS_NUMBER
+        self.dict_partitions = dict_partitions
+        self.final_list_of_all_dependencies = final_list_of_all_dependencies
+        self.column_headers = column_headers
+        self.row_labels_number = row_labels_number
 
     def findCplus(self, x):  # this computes the Cplus of x as an intersection of smaller Cplus sets
         thesets = []
         for a in x:
-            if x.replace(a, '') in self.CANDIDATES.keys():
-                temp = self.CANDIDATES[x.replace(a, '')]
+            x_without_a = x.replace(a, '')
+            if x_without_a in self.candidates.keys():
+                temp = self.candidates[x_without_a]
             else:
-                temp = self.findCplus(x.replace(a, ''))  # compute C+(X\{A}) for each A at a time
-            # dictCplus[x.replace(a,'')] = temp
-            thesets.insert(0, set(temp))
-        if list(set.intersection(*thesets)) == []:
-            cplus = []
-        else:
-            cplus = list(set.intersection(*thesets))  # compute the intersection in line 2 of pseudocode
-        return cplus
+                temp = self.findCplus(x_without_a)  # compute C+(X\{A}) for each A at a time
+            thesets.append(set(temp))
+        return list(set.intersection(*thesets))
 
     def compute_dependencies(self, level):
         for x in level:
             attr_candidates = []
             for a in x:
                 x_without_a = x.replace(a, '')
-                attr_candidates.insert(0, set(self.CANDIDATES[x_without_a]))
-            self.CANDIDATES[x] = list(set.intersection(*attr_candidates))
-
+                attr_candidates.insert(0, set(self.candidates[x_without_a]))
+            self.candidates[x] = list(set.intersection(*attr_candidates))  # compute the intersection in line 2 of pseudocode
         for x in level:
             for a in x:
-                if a in self.CANDIDATES[x]:
+                if a in self.candidates[x]:
                     # if x=='BCJ': print "dictCplus['BCJ'] = ", dictCplus[x]
                     if self.validfd(x.replace(a, ''), a):  # line 5
-                        self.FINAL_LIST_OF_ALL_DEPENDENCIES.append([x.replace(a, ''), a])  # line 6
-                        self.CANDIDATES[x].remove(a)  # line 7
+                        self.final_list_of_all_dependencies.append([x.replace(a, ''), a])  # line 6
+                        self.candidates[x].remove(a)  # line 7
 
                         # TODO do funkcji, bo obrzydliwe
-                        listofcols = self.COLUMN_HEADERS[:]
+                        listofcols = self.column_headers[:]
                         for j in x:  # this loop computes R\X
                             if j in listofcols: listofcols.remove(j)
 
                         for b in listofcols:  # this loop removes each b in R\X from C+(X)
-                            if b in self.CANDIDATES[x]: self.CANDIDATES[x].remove(b)
+                            if b in self.candidates[x]: self.candidates[x].remove(b)
 
     def validfd(self, y, z):
         if y == '' or z == '': return False
@@ -62,32 +57,32 @@ class Tane:
 
     def computeE(self, x):
         doublenorm = 0
-        for i in self.DICT_PARTITIONS[''.join(sorted(x))]:
+        for i in self.dict_partitions[''.join(sorted(x))]:
             doublenorm = doublenorm + len(i)
-        e = (doublenorm - len(self.DICT_PARTITIONS[''.join(sorted(x))])) / float(self.ROW_LABELS_NUMBER)
+        e = (doublenorm - len(self.dict_partitions[''.join(sorted(x))])) / float(self.row_labels_number)
         return e
 
-    def check_superkey(self, x):
-        return (self.DICT_PARTITIONS[x] == [[]]) or (self.DICT_PARTITIONS[x] == [])
+    def is_superkey(self, x):
+        return (self.dict_partitions[x] == [[]]) or (self.dict_partitions[x] == [])
 
     def prune(self, level):
         stufftobedeletedfromlevel = []
         for x in level:  # line 1
-            if self.CANDIDATES[x] == []:  # line 2
+            if self.candidates[x] == []:  # line 2
                 level.remove(x)  # line 3
-            if self.check_superkey(x):  # line 4   ### should this check for a key, instead of super key??? Not sure.
-                temp = self.CANDIDATES[x][:]
+            if self.is_superkey(x):  # line 4   ### should this check for a key, instead of super key??? Not sure.
+                temp = self.candidates[x][:]
                 for i in x:  # this loop computes C+(X) \ X
                     if i in temp: temp.remove(i)
                 for a in temp:  # line 5
                     thesets = []
                     for b in x:
-                        if not (''.join(sorted((x + a).replace(b, ''))) in self.CANDIDATES.keys()):
-                            self.CANDIDATES[''.join(sorted((x + a).replace(b, '')))] = self.findCplus(
+                        if not (''.join(sorted((x + a).replace(b, ''))) in self.candidates.keys()):
+                            self.candidates[''.join(sorted((x + a).replace(b, '')))] = self.findCplus(
                                 ''.join(sorted((x + a).replace(b, ''))))
-                        thesets.insert(0, set(self.CANDIDATES[''.join(sorted((x + a).replace(b, '')))]))
+                        thesets.insert(0, set(self.candidates[''.join(sorted((x + a).replace(b, '')))]))
                     if a in list(set.intersection(*thesets)):  # line 6
-                        self.FINAL_LIST_OF_ALL_DEPENDENCIES.append([x, a])  # line 7
+                        self.final_list_of_all_dependencies.append([x, a])  # line 7
                 # print "adding key FD: ", [x,a]
                 if x in level: stufftobedeletedfromlevel.append(x)  # line 8
         for item in stufftobedeletedfromlevel:
@@ -128,9 +123,9 @@ class Tane:
 
     def stripped_product(self, x, y, z):
         tableS = [''] * len(self.table_t)
-        partitionY = self.DICT_PARTITIONS[
+        partitionY = self.dict_partitions[
             ''.join(sorted(y))]  # partitionY is a list of lists, each list is an equivalence class
-        partitionZ = self.DICT_PARTITIONS[''.join(sorted(z))]
+        partitionZ = self.dict_partitions[''.join(sorted(z))]
         partitionofx = []  # line 1
         for i in range(len(partitionY)):  # line 2
             for t in partitionY[i]:  # line 3
@@ -141,14 +136,13 @@ class Tane:
                 if (not (self.table_t[t] == 'NULL')):  # line 7
                     tableS[self.table_t[t]] = sorted(list(set(tableS[self.table_t[t]]) | set([t])))
             for t in partitionZ[i]:  # line 8
-                table_t = self.table_t
-                if (not (table_t[t] == 'NULL')) and len(tableS[table_t[t]]) >= 2:  # line 9
-                    partitionofx.append(tableS[table_t[t]])
-                if not (table_t[t] == 'NULL'): tableS[table_t[t]] = ''  # line 10
+                if (not (self.table_t[t] == 'NULL')) and len(tableS[self.table_t[t]]) >= 2:  # line 9
+                    partitionofx.append(tableS[self.table_t[t]])
+                if not (self.table_t[t] == 'NULL'): tableS[self.table_t[t]] = ''  # line 10
         for i in range(len(partitionY)):  # line 11
             for t in partitionY[i]:  # line 12
-                table_t[t] = 'NULL'
-        self.DICT_PARTITIONS[''.join(sorted(x))] = partitionofx
+                self.table_t[t] = 'NULL'
+        self.dict_partitions[''.join(sorted(x))] = partitionofx
 
 
 def computeSingletonPartitions(listofcols, data_2d, dict_partitions):
@@ -181,7 +175,7 @@ def initialize_tane_from_file(input_file: STRING):
     computeSingletonPartitions(COLUMN_HEADERS, DATA_2D, DICT_PARTITIONS)
 
     return Tane(data_2d=DATA_2D, candidates=CANDIDATES, table_t=TABLE_T, dict_partitions=DICT_PARTITIONS,
-                FINAL_LIST_OF_ALL_DEPENDENCIES=[], COLUMN_HEADERS=COLUMN_HEADERS, ROW_LABELS_NUMBER=ROW_LABELS_NUMBER)
+                final_list_of_all_dependencies=[], column_headers=COLUMN_HEADERS, row_labels_number=ROW_LABELS_NUMBER)
 
 
 @click.command()
@@ -196,7 +190,7 @@ def main(input_file: STRING):
     tane = initialize_tane_from_file(input_file)
 
     L0 = []
-    L1 = tane.COLUMN_HEADERS[:]  # L1 is a copy of listofcolumns
+    L1 = tane.column_headers[:]  # L1 is a copy of listofcolumns
     l = 1
     L = [L0, L1]
 
@@ -207,8 +201,8 @@ def main(input_file: STRING):
         L.append(temp)
         l = l + 1
 
-    print(f"List of all FDs: {tane.FINAL_LIST_OF_ALL_DEPENDENCIES}")
-    print(f"Total number of FDs found: {len(tane.FINAL_LIST_OF_ALL_DEPENDENCIES)}")
+    print(f"List of all FDs: {tane.final_list_of_all_dependencies}")
+    print(f"Total number of FDs found: {len(tane.final_list_of_all_dependencies)}")
 
 
 if __name__ == '__main__':
