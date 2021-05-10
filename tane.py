@@ -10,7 +10,7 @@ class Tane:
                  row_labels_number):
         self.data_2d = data_2d
         self.candidates = candidates
-        self.table_t = table_t
+        self.t = table_t
         self.dict_partitions = dict_partitions
         self.final_list_of_all_dependencies = final_list_of_all_dependencies
         self.column_headers = column_headers
@@ -152,32 +152,43 @@ class Tane:
 
         return lower_level
 
+    def initialise_stripped_partitions(self, c1):
+        s = [[]] * len(self.t)
+        for i in range(len(c1)):
+            for t in c1[i]:
+                self.t[t] = i
+
+        return s, self.t
+
     def stripped_product(self, x, y, z):
-        tableS = [''] * len(self.table_t)
-        partitionY = self.dict_partitions[
-            ''.join(sorted(y))]  # partitionY is a list of lists, each list is an equivalence class
-        partitionZ = self.dict_partitions[''.join(sorted(z))]
-        partitionofx = []  # line 1
-        for i in range(len(partitionY)):  # line 2
-            for t in partitionY[i]:  # line 3
-                self.table_t[t] = i
-            tableS[i] = ''  # line 4
-        for i in range(len(partitionZ)):  # line 5
-            for t in partitionZ[i]:  # line 6
-                if (not (self.table_t[t] == 'NULL')):  # line 7
-                    tableS[self.table_t[t]] = sorted(list(set(tableS[self.table_t[t]]) | set([t])))
-            for t in partitionZ[i]:  # line 8
-                if (not (self.table_t[t] == 'NULL')) and len(tableS[self.table_t[t]]) >= 2:  # line 9
-                    partitionofx.append(tableS[self.table_t[t]])
-                if not (self.table_t[t] == 'NULL'): tableS[self.table_t[t]] = ''  # line 10
-        for i in range(len(partitionY)):  # line 11
-            for t in partitionY[i]:  # line 12
-                self.table_t[t] = 'NULL'
-        self.dict_partitions[''.join(sorted(x))] = partitionofx
+        c1 = self.dict_partitions[y]
+        c2 = self.dict_partitions[z]
+        pi = []
+
+        # TODO niepotrzebne self.t
+        s, self.t = self.initialise_stripped_partitions(c1)
+
+        for i in range(len(c2)):
+            for t in c2[i]:
+                if self.t[t] != 'NULL':
+                    s[self.t[t]] = s[self.t[t]] + [t]
+                    
+            for t in c2[i]:
+                if self.t[t] != 'NULL':
+                    if len(s[self.t[t]]) >= 2:
+                        pi.append(s[self.t[t]])
+
+                    s[self.t[t]] = ''
+
+        for i in range(len(c1)):
+            for t in c1[i]:
+                self.t[t] = 'NULL'
+
+        self.dict_partitions[x] = pi
 
 
-def computeSingletonPartitions(listofcols, data_2d, dict_partitions):
-    for a in listofcols:
+def computeSingletonPartitions(columns, data_2d, dict_partitions):
+    for a in columns:
         dict_partitions[a] = []
         for element in list_duplicates(data_2d[a].tolist()):
             if len(element[1]) > 1:  # ignore singleton equivalence classes
