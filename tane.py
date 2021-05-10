@@ -1,12 +1,3 @@
-"""------------------------------------------------------------------------------------------
-TANE Algorithm for discovery of exact functional dependencies
-Author: Nabiha Asghar, nasghar@uwaterloo.ca
-February 2015
-Use for research purposes only.
-Please do not re-distribute without written permission from the author
-Any commerical uses strictly forbidden.
-Code is provided without any guarantees.
-----------------------------------------------------------------------------------------------"""
 from pandas import *
 from collections import defaultdict
 import sys
@@ -69,10 +60,7 @@ def validfd(y, z):
     if y == '' or z == '': return False
     ey = computeE(y)
     eyz = computeE(y + z)
-    if ey == eyz:
-        return True
-    else:
-        return False
+    return ey == eyz
 
 
 def computeE(x):
