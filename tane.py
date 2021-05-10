@@ -9,7 +9,6 @@ Code is provided without any guarantees.
 ----------------------------------------------------------------------------------------------"""
 from pandas import *
 from collections import defaultdict
-import numpy as NP
 import sys
 
 
@@ -64,6 +63,7 @@ def compute_dependencies(level):
 
                     for b in listofcols:  # this loop removes each b in R\X from C+(X)
                         if b in candidates[x]: candidates[x].remove(b)
+
 
 def validfd(y, z):
     if y == '' or z == '': return False
