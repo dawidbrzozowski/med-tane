@@ -33,6 +33,7 @@ class Tane:
                 x_without_a = x.replace(a, '')
                 attr_candidates.insert(0, set(self.candidates[x_without_a]))
             self.candidates[x] = list(set.intersection(*attr_candidates))  # compute the intersection in line 2 of pseudocode
+
         for x in level:
             for a in x:
                 if a in self.candidates[x]:
@@ -65,28 +66,60 @@ class Tane:
     def is_superkey(self, x):
         return (self.dict_partitions[x] == [[]]) or (self.dict_partitions[x] == [])
 
+    def calculate_candidates_without_element(self, x):
+        result = self.candidates[x][:]
+        for i in x:
+            if i in result:
+                result.remove(i)
+
+        return result
+
+    def set_add(self, a, b):
+        return ''.join(sorted(a + b))
+
+    def set_substruct(self, a, b):
+        return a.replace(b, '')
+
+    def generate_candidate_sets(self, a, x):
+        attr_with_candidate = self.set_add(x, a)
+        # set w znaczeniu zbior algebraiczny
+        candidate_sets = []
+        for b in x:
+            potential_candidate = self.set_substruct(attr_with_candidate, b)
+            if potential_candidate not in self.candidates.keys():
+                self.candidates[potential_candidate] = self.findCplus(potential_candidate)
+
+            candidate_sets.append(set(potential_candidate))
+
+        return candidate_sets
+
     def prune(self, level):
-        stufftobedeletedfromlevel = []
-        for x in level:  # line 1
-            if self.candidates[x] == []:  # line 2
-                level.remove(x)  # line 3
-            if self.is_superkey(x):  # line 4   ### should this check for a key, instead of super key??? Not sure.
-                temp = self.candidates[x][:]
-                for i in x:  # this loop computes C+(X) \ X
-                    if i in temp: temp.remove(i)
-                for a in temp:  # line 5
-                    thesets = []
-                    for b in x:
-                        if not (''.join(sorted((x + a).replace(b, ''))) in self.candidates.keys()):
-                            self.candidates[''.join(sorted((x + a).replace(b, '')))] = self.findCplus(
-                                ''.join(sorted((x + a).replace(b, ''))))
-                        thesets.insert(0, set(self.candidates[''.join(sorted((x + a).replace(b, '')))]))
-                    if a in list(set.intersection(*thesets)):  # line 6
-                        self.final_list_of_all_dependencies.append([x, a])  # line 7
-                # print "adding key FD: ", [x,a]
-                if x in level: stufftobedeletedfromlevel.append(x)  # line 8
-        for item in stufftobedeletedfromlevel:
+        to_del_from_level = []
+        for x in level:
+
+            if not self.candidates[x]:
+                level.remove(x)
+
+            # odwróciliśmy logikę dla większej czytelności
+            if not self.is_superkey(x):
+                continue
+
+            result = self.candidates[x][:]
+            for i in x:
+                if i in result:
+                    result.remove(i)
+
+            for a in result:
+                sets = self.generate_candidate_sets(a, x)
+                if a in set.intersection(*sets):
+                    self.final_list_of_all_dependencies.append([x, a])
+
+            if x in level:
+                to_del_from_level.append(x)
+
+        for item in to_del_from_level:
             level.remove(item)
+
 
     def generate_prefix_block(self, level):
         prefix_block = []
