@@ -1,12 +1,13 @@
 from click import STRING
-from pandas import *
+import pandas as pd
 from collections import defaultdict
 import click
 
 
 class Tane:
 
-    def __init__(self, data_2d, candidates, table_t, dict_partitions, final_list_of_all_dependencies, column_headers, row_labels_number):
+    def __init__(self, data_2d, candidates, table_t, dict_partitions, final_list_of_all_dependencies, column_headers,
+                 row_labels_number):
         self.data_2d = data_2d
         self.candidates = candidates
         self.table_t = table_t
@@ -32,7 +33,8 @@ class Tane:
             for a in x:
                 x_without_a = x.replace(a, '')
                 attr_candidates.insert(0, set(self.candidates[x_without_a]))
-            self.candidates[x] = list(set.intersection(*attr_candidates))  # compute the intersection in line 2 of pseudocode
+            self.candidates[x] = list(
+                set.intersection(*attr_candidates))  # compute the intersection in line 2 of pseudocode
         for x in level:
             for a in x:
                 if a in self.candidates[x]:
@@ -42,11 +44,11 @@ class Tane:
                         self.candidates[x].remove(a)  # line 7
 
                         # TODO do funkcji, bo obrzydliwe
-                        listofcols = self.column_headers[:]
+                        column_headers = self.column_headers[:]
                         for j in x:  # this loop computes R\X
-                            if j in listofcols: listofcols.remove(j)
+                            if j in column_headers: column_headers.remove(j)
 
-                        for b in listofcols:  # this loop removes each b in R\X from C+(X)
+                        for b in column_headers:  # this loop removes each b in R\X from C+(X)
                             if b in self.candidates[x]: self.candidates[x].remove(b)
 
     def validfd(self, y, z):
@@ -161,21 +163,20 @@ def list_duplicates(seq):
             if len(locs) > 0)
 
 
-
 def initialize_tane_from_file(input_file: STRING):
-    DATA_2D = read_csv(input_file)
+    data_df = pd.read_csv(input_file)
 
-    ROW_LABELS_NUMBER = len(DATA_2D.index)
-    COLUMN_HEADERS = list(DATA_2D.columns.values)  # returns ['A', 'B', 'C', 'D', .....]
+    row_labels_number = len(data_df.index)
+    columns_header = list(data_df.columns.values)  # returns ['A', 'B', 'C', 'D', .....]
 
-    TABLE_T = ['NULL'] * ROW_LABELS_NUMBER  # this is for the table T used in the function stripped_product
+    table_t = ['NULL'] * row_labels_number  # this is for the table T used in the function stripped_product
 
-    CANDIDATES = {'': COLUMN_HEADERS[:]}
-    DICT_PARTITIONS = {}  # maps 'stringslikethis' to a list of lists, each of which contains indices
-    computeSingletonPartitions(COLUMN_HEADERS, DATA_2D, DICT_PARTITIONS)
+    candidates = {'': columns_header[:]}
+    dict_partitions = {}  # maps 'stringslikethis' to a list of lists, each of which contains indices
+    computeSingletonPartitions(columns_header, data_df, dict_partitions)
 
-    return Tane(data_2d=DATA_2D, candidates=CANDIDATES, table_t=TABLE_T, dict_partitions=DICT_PARTITIONS,
-                final_list_of_all_dependencies=[], column_headers=COLUMN_HEADERS, row_labels_number=ROW_LABELS_NUMBER)
+    return Tane(data_2d=data_df, candidates=candidates, table_t=table_t, dict_partitions=dict_partitions,
+                final_list_of_all_dependencies=[], column_headers=columns_header, row_labels_number=row_labels_number)
 
 
 @click.command()
@@ -185,7 +186,6 @@ def initialize_tane_from_file(input_file: STRING):
     type=STRING,
     required=True,
     help="Path to the input file")
-
 def main(input_file: STRING):
     tane = initialize_tane_from_file(input_file)
 
