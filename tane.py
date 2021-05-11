@@ -6,65 +6,67 @@ import click
 
 class Tane:
 
-    def __init__(self, data_2d, candidates, dict_partitions, final_list_of_all_dependencies, column_headers,
-                 row_labels_number):
+    def __init__(self, data_2d, candidates, partitions, column_headers, row_labels_number):
         self.data_2d = data_2d
         self.candidates = candidates
-        self.dict_partitions = dict_partitions
-        self.final_list_of_all_dependencies = final_list_of_all_dependencies
-        self.column_headers = column_headers
+        self.partitions = partitions
+        self.final_list_of_all_dependencies = []
+        self.attrs = column_headers
         self.row_labels_number = row_labels_number
 
-    def findCplus(self, x):  # this computes the Cplus of x as an intersection of smaller Cplus sets
+    def search_for_candidates(self, x):
         thesets = []
         for a in x:
-            x_without_a = x.replace(a, '')
+            x_without_a = self.set_substruct(x, a)
             if x_without_a in self.candidates.keys():
                 temp = self.candidates[x_without_a]
             else:
-                temp = self.findCplus(x_without_a)  # compute C+(X\{A}) for each A at a time
+                temp = self.search_for_candidates(x_without_a)
             thesets.append(set(temp))
         return list(set.intersection(*thesets))
+
+    def compute_candidates_without_attr(self, x):
+        attrs = self.attrs[:]
+        for j in x:
+            if j in attrs:
+                attrs.remove(j)
+
+        return attrs
 
     def compute_dependencies(self, level):
         for x in level:
             attr_candidates = []
             for a in x:
-                x_without_a = x.replace(a, '')
+                x_without_a = self.set_substruct(x, a)
                 attr_candidates.insert(0, set(self.candidates[x_without_a]))
-            self.candidates[x] = list(set.intersection(*attr_candidates))  # compute the intersection in line 2 of pseudocode
+            self.candidates[x] = list(set.intersection(*attr_candidates))
 
         for x in level:
             for a in x:
                 if a in self.candidates[x]:
-                    # if x=='BCJ': print "dictCplus['BCJ'] = ", dictCplus[x]
-                    if self.validfd(x.replace(a, ''), a):  # line 5
-                        self.final_list_of_all_dependencies.append([x.replace(a, ''), a])  # line 6
-                        self.candidates[x].remove(a)  # line 7
+                    if self.is_functional_dependency(self.set_substruct(x, a), a):
+                        self.final_list_of_all_dependencies.append([x.replace(a, ''), a])
+                        self.candidates[x].remove(a)
 
-                        # TODO do funkcji, bo obrzydliwe
-                        column_headers = self.column_headers[:]
-                        for j in x:  # this loop computes R\X
-                            if j in column_headers: column_headers.remove(j)
+                        for b in self.compute_candidates_without_attr(x):
+                            if b in self.candidates[x]:
+                                self.candidates[x].remove(b)
 
-                        for b in column_headers:  # this loop removes each b in R\X from C+(X)
-                            if b in self.candidates[x]: self.candidates[x].remove(b)
+    def is_functional_dependency(self, a, b):
+        if not a or not b:
+            return False
 
-    def validfd(self, y, z):
-        if y == '' or z == '': return False
-        ey = self.computeE(y)
-        eyz = self.computeE(y + z)
-        return ey == eyz
+        return self.check_error(a) == self.check_error(self.set_add(a, b))
 
-    def computeE(self, x):
-        doublenorm = 0
-        for i in self.dict_partitions[''.join(sorted(x))]:
-            doublenorm = doublenorm + len(i)
-        e = (doublenorm - len(self.dict_partitions[''.join(sorted(x))])) / float(self.row_labels_number)
-        return e
+    def check_error(self, x):
+        total = 0
+        for i in self.partitions[x]:
+            total = total + len(i)
 
-    def is_superkey(self, x):
-        return (self.dict_partitions[x] == [[]]) or (self.dict_partitions[x] == [])
+        return (total - len(self.partitions[x])) / self.row_labels_number
+
+    def is_super_key(self, x):
+        return not self.partitions[x] or not self.partitions[x][0]
 
     def calculate_candidates_without_element(self, x):
         result = self.candidates[x][:]
@@ -87,21 +89,20 @@ class Tane:
         for b in x:
             potential_candidate = self.set_substruct(attr_with_candidate, b)
             if potential_candidate not in self.candidates.keys():
-                self.candidates[potential_candidate] = self.findCplus(potential_candidate)
+                self.candidates[potential_candidate] = self.search_for_candidates(potential_candidate)
 
             candidate_sets.append(set(self.candidates[potential_candidate]))
 
         return candidate_sets
 
     def prune(self, level):
-        to_del_from_level = []
         for x in level:
 
             if not self.candidates[x]:
                 level.remove(x)
 
             # odwróciliśmy logikę dla większej czytelności
-            if not self.is_superkey(x):
+            if not self.is_super_key(x):
                 continue
 
             result = self.candidates[x][:]
@@ -161,8 +162,8 @@ class Tane:
         return s_tab, t_tab
 
     def stripped_product(self, x, y, z):
-        c1 = self.dict_partitions[y]
-        c2 = self.dict_partitions[z]
+        c1 = self.partitions[y]
+        c2 = self.partitions[z]
         pi = []
 
         s_tab, t_tab = self.initialise_stripped_partitions(c1)
@@ -183,15 +184,15 @@ class Tane:
             for t in c1[i]:
                 t_tab[t] = None
 
-        self.dict_partitions[x] = pi
+        self.partitions[x] = pi
 
 
-def computeSingletonPartitions(columns, data_2d, dict_partitions):
+def computeSingletonPartitions(columns, data_2d, partitions):
     for a in columns:
-        dict_partitions[a] = []
+        partitions[a] = []
         for element in list_duplicates(data_2d[a].tolist()):
-            if len(element[1]) > 1:  # ignore singleton equivalence classes
-                dict_partitions[a].append(element[1])
+            if len(element[1]) > 1:
+                partitions[a].append(element[1])
 
 
 def list_duplicates(seq):
@@ -211,11 +212,11 @@ def initialize_tane_from_file(input_file: STRING):
       # this is for the table T used in the function stripped_product
 
     candidates = {'': columns_header[:]}
-    dict_partitions = {}  # maps 'stringslikethis' to a list of lists, each of which contains indices
-    computeSingletonPartitions(columns_header, data_df, dict_partitions)
+    partitions = {}  # maps 'stringslikethis' to a list of lists, each of which contains indices
+    computeSingletonPartitions(columns_header, data_df, partitions)
 
-    return Tane(data_2d=data_df, candidates=candidates, dict_partitions=dict_partitions,
-                final_list_of_all_dependencies=[], column_headers=columns_header, row_labels_number=row_labels_number)
+    return Tane(data_2d=data_df, candidates=candidates, partitions=partitions,
+                column_headers=columns_header, row_labels_number=row_labels_number)
 
 
 @click.command()
@@ -229,7 +230,7 @@ def main(input_file: STRING):
     tane = initialize_tane_from_file(input_file)
 
     L0 = []
-    L1 = tane.column_headers[:]  # L1 is a copy of listofcolumns
+    L1 = tane.attrs[:]  # L1 is a copy of listofcolumns
     l = 1
     L = [L0, L1]
 
