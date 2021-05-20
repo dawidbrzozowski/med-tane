@@ -5,17 +5,89 @@ import click
 import pandas as pd
 from click import STRING
 import visualisation as vis
+from string import ascii_uppercase
 
 
 class Tane:
 
-    def __init__(self, data_2d, candidates, partitions, column_headers, row_labels_number):
+
+    def __init__(self, data_2d):
         self.data_2d = data_2d
-        self.candidates = candidates
-        self.partitions = partitions
+
+        row_labels_number = len(data_2d.index)
+        columns_header = list(data_2d.columns.values)
+
+        self.column_to_name, self.name_to_column = self._create_column_maps(columns_header)
+        data_2d.columns = self.name_to_column.keys()
+
+        initial_candidates = [item for item in self.name_to_column.keys()]
+        self.candidates = {'': initial_candidates}
+
         self.final_list_of_all_dependencies = []
-        self.attrs = column_headers
+        self.attrs = initial_candidates
         self.row_labels_number = row_labels_number
+
+        self._generate_global_partitions(initial_candidates, data_2d)
+
+    def _generate_global_partitions(self, columns, data_2d):
+        self.partitions = {}
+        for a in columns:
+            self.partitions[a] = []
+            for element in self._list_duplicates(data_2d[a].tolist()):
+                if len(element[1]) > 1:
+                    self.partitions[a].append(element[1])
+
+    def _list_duplicates(self, seq):
+        tally = defaultdict(list)
+        for i, item in enumerate(seq):
+            tally[item].append(i)
+        return ((key, locs) for key, locs in tally.items()
+                if len(locs) > 0)
+
+    def _map_multiset_to_names(self, column):
+
+        name_string = ""
+        for c in column:
+            name = self.name_to_column[c]
+            name_string = name_string + name + ","
+
+        return name_string[:-1]
+
+
+    def _get_name_from_column(self, column):
+        if len(column) > 1:
+            return self._map_multiset_to_names(column)
+        else:
+            return self.name_to_column[column]
+
+
+    def get_final_list_of_all_dependencies(self):
+
+        renamed_dep_list = []
+        for dep in self.final_list_of_all_dependencies:
+
+            dep_start = self._get_name_from_column(dep[0])
+            dep_end = self._get_name_from_column(dep[1])
+
+            renamed_dep = [dep_start, dep_end]
+            renamed_dep_list.append(renamed_dep)
+
+        return renamed_dep_list
+
+    def _create_column_maps(self, columns):
+        i = 0
+        column_to_name = {}
+        name_to_column = {}
+        for c in ascii_uppercase:
+
+            if i >= len(columns):
+                break
+
+            column_to_name[columns[i]] = c
+            name_to_column[c] = columns[i]
+            i = i + 1
+
+        return column_to_name, name_to_column
 
     def search_for_candidates(self, x):
         thesets = []
@@ -121,7 +193,6 @@ class Tane:
             if x in level:
                 level.remove(x)
 
-
     def generate_prefix_block(self, level):
         prefix_block = []
         for i in range(len(level)):
@@ -175,7 +246,7 @@ class Tane:
             for t in c2[i]:
                 if t_tab[t] is not None:
                     s_tab[t_tab[t]] = s_tab[t_tab[t]] + [t]
-                    
+
             for t in c2[i]:
                 if t_tab[t] is not None:
                     if len(s_tab[t_tab[t]]) >= 2:
@@ -189,38 +260,9 @@ class Tane:
 
         self.partitions[x] = pi
 
-
-def computeSingletonPartitions(columns, data_2d, partitions):
-    for a in columns:
-        partitions[a] = []
-        for element in list_duplicates(data_2d[a].tolist()):
-            if len(element[1]) > 1:
-                partitions[a].append(element[1])
-
-
-def list_duplicates(seq):
-    tally = defaultdict(list)
-    for i, item in enumerate(seq):
-        tally[item].append(i)
-    return ((key, locs) for key, locs in tally.items()
-            if len(locs) > 0)
-
-
 def initialize_tane_from_file(input_file: STRING):
     data_df = pd.read_csv(input_file)
-
-    row_labels_number = len(data_df.index)
-    columns_header = list(data_df.columns.values)  # returns ['A', 'B', 'C', 'D', .....]
-
-      # this is for the table T used in the function stripped_product
-
-    candidates = {'': columns_header[:]}
-    partitions = {}  # maps 'stringslikethis' to a list of lists, each of which contains indices
-    computeSingletonPartitions(columns_header, data_df, partitions)
-
-    return Tane(data_2d=data_df, candidates=candidates, partitions=partitions,
-                column_headers=columns_header, row_labels_number=row_labels_number)
-
+    return Tane(data_2d=data_df)
 
 @click.command()
 @click.option(
@@ -246,15 +288,13 @@ def main(input_file: STRING):
         L.append(temp)
         l = l + 1
 
-    print(f"List of all FDs: {tane.final_list_of_all_dependencies}")
-    print(f"Total number of FDs found: {len(tane.final_list_of_all_dependencies)}")
+    print(f"List of all FDs: {tane.get_final_list_of_all_dependencies()}")
+    print(f"Total number of FDs found: {len(tane.get_final_list_of_all_dependencies())}")
 
     end = time.time()
     print(f"Runtime of the program is {end - start}")
 
-    visualiser = vis.Visualiser(tane.final_list_of_all_dependencies)
-
-
+    visualiser = vis.Visualiser(tane.get_final_list_of_all_dependencies())
 
 
 if __name__ == '__main__':
