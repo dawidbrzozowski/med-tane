@@ -31,7 +31,17 @@ class TextVectorizer:
 
     @property
     def vocab(self) -> List[str]:
+        """
+        :return: vocabulary used by the TextVectorizer.
+        """
         return list(self._vocab.keys())
+
+    @property
+    def vocab_size(self) -> int:
+        """
+        :return: Actual vocab size.
+        """
+        return len(self._vocab)
 
     def _get_top_n_words(self, texts: List[str], n: int) -> Set[str]:
         """
