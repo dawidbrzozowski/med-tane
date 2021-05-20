@@ -5,6 +5,10 @@ import nltk
 
 
 class TextVectorizer:
+    """
+    Builds a vocabulary on top of the provided list of texts.
+    Has one public method for vectorizing texts into binary vectors that tell if the word is present.
+    """
 
     def __init__(self, texts: List[str], n: int = 100):
         self._n = n
