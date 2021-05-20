@@ -49,7 +49,7 @@ class TextVectorizer:
         :param n: the number of attributes to be extracted.
         :return: top n attributes (words).
         """
-        vec = CountVectorizer(max_features=n)
+        vec = CountVectorizer(max_features=n, stop_words='english')
         stemmed_texts = [self._stem_text(text) for text in texts]
         vec.fit(stemmed_texts)
         return vec.vocabulary_.keys()
