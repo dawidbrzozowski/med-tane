@@ -14,7 +14,7 @@ class TextVectorizer:
         self._n = n
         self._stemmer = nltk.stem.PorterStemmer()
         top_n_words = self._get_top_n_words(texts, n)
-        self._words = {word: i for i, word in enumerate(top_n_words)}
+        self._vocab = {word: i for i, word in enumerate(top_n_words)}
 
     def vectorize_text(self, text: str) -> List[int]:
         """
@@ -25,9 +25,13 @@ class TextVectorizer:
         text = self._stem_text(text)
         result = self._n * [0]
         for word in text.split():
-            if word in self._words:
-                result[self._words[word]] = 1
+            if word in self._vocab:
+                result[self._vocab[word]] = 1
         return result
+
+    @property
+    def vocab(self) -> List[str]:
+        return list(self._vocab.keys())
 
     def _get_top_n_words(self, texts: List[str], n: int) -> Set[str]:
         """
