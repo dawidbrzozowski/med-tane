@@ -282,6 +282,7 @@ def main(input_file: STRING):
     L = [L0, L1]
 
     while L[l]:
+        print(f"Current level is {l}")
         tane.compute_dependencies(L[l])
         tane.prune(L[l])
         temp = tane.generate_next_level(L[l])
