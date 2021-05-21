@@ -21,11 +21,16 @@ def serialise_int_list(row):
 
 if __name__ == '__main__':
     dataset = load_json('data/tweets.json')
-    v = TextVectorizer(dataset, 20)
+
+    preprocessed_dataset = []
+    for data in dataset:
+        # remove @link
+        preprocessed_dataset.append(" ".join(filter(lambda x: x[0] != '@', data.split())))
+
+    v = TextVectorizer(preprocessed_dataset, 20)
 
     with open("output.txt", "w") as txt_file:
 
-        dummy = v.vocab
         txt_file.write(serialise_int_list(v.vocab) + "\n")
         random.shuffle(dataset)
         for data_row in dataset:

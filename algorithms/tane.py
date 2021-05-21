@@ -109,6 +109,8 @@ class Tane:
         return attrs
 
     def compute_dependencies(self, level):
+        start = time.time()
+        print(f"Computing dependencies step 1 Level size {len(level)} Current level is {level}")
         for x in level:
             attr_candidates = []
             for a in x:
@@ -116,6 +118,7 @@ class Tane:
                 attr_candidates.insert(0, set(self.candidates[x_without_a]))
             self.candidates[x] = list(set.intersection(*attr_candidates))
 
+        print(f"Computing dependencies step 2 Level size {len(level)} Current level is {level}")
         for x in level:
             for a in x:
                 if a in self.candidates[x]:
@@ -126,6 +129,9 @@ class Tane:
                         for b in self.compute_candidates_without_attr(x):
                             if b in self.candidates[x]:
                                 self.candidates[x].remove(b)
+
+        end = time.time()
+        print(f"Computing dependencies end Time:{end-start}")
 
     def is_functional_dependency(self, a, b):
         if not a or not b:
@@ -171,6 +177,10 @@ class Tane:
         return candidate_sets
 
     def prune(self, level):
+
+        start = time.time()
+        print(f"Pruning: Level size {len(level)} Current level is {level}")
+
         for x in level:
 
             if not self.candidates[x]:
@@ -193,6 +203,9 @@ class Tane:
             if x in level:
                 level.remove(x)
 
+        end = time.time()
+        print(f"Pruning end Time:{end-start}")
+
     def generate_prefix_block(self, level):
         prefix_block = []
         for i in range(len(level)):
@@ -213,6 +226,9 @@ class Tane:
         return True
 
     def generate_next_level(self, level):
+
+        start = time.time()
+        print(f"Generating next level: Level size {len(level)} Current level is {level}")
         lower_level = []
         # w naszej implementacji prefix_blocks juz nie zawieraja y == z
         prefix_blocks = self.generate_prefix_block(level)
@@ -224,6 +240,8 @@ class Tane:
                 lower_level.append(x)
                 self.stripped_product(x, y, z)
 
+        end = time.time()
+        print(f"Generating level end Time:{end - start}")
         return lower_level
 
     def initialise_stripped_partitions(self, c1):
@@ -236,6 +254,8 @@ class Tane:
         return s_tab, t_tab
 
     def stripped_product(self, x, y, z):
+        # start = time.time()
+        # print(f"Stripping product: step1")
         c1 = self.partitions[y]
         c2 = self.partitions[z]
         pi = []
@@ -254,11 +274,15 @@ class Tane:
 
                     s_tab[t_tab[t]] = []
 
+        # print(f"Stripping product: step1")
         for i in range(len(c1)):
             for t in c1[i]:
                 t_tab[t] = None
 
         self.partitions[x] = pi
+
+        # end = time.time()
+        # print(f"Stripping end Time:{end - start}")
 
 def initialize_tane_from_file(input_file: STRING):
     data_df = pd.read_csv(input_file)
@@ -293,7 +317,7 @@ def main(input_file: STRING):
     print(f"Total number of FDs found: {len(tane.get_final_list_of_all_dependencies())}")
 
     end = time.time()
-    print(f"Runtime of the program is {end - start}")
+    print(f"Runtime of Tane is {end - start}")
 
     visualiser = vis.Visualiser(tane.get_final_list_of_all_dependencies())
 
