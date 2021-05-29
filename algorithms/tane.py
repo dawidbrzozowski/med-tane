@@ -177,7 +177,6 @@ class Tane:
         return candidate_sets
 
     def prune(self, level):
-
         start = time.time()
         print(f"Pruning: Level size {len(level)} Current level is {level}")
 
@@ -204,7 +203,7 @@ class Tane:
                 level.remove(x)
 
         end = time.time()
-        print(f"Pruning end Time:{end-start}")
+        print(f"Pruning: Prunned level size {len(level)}")
 
     def generate_prefix_block(self, level):
         prefix_block = []
@@ -226,7 +225,6 @@ class Tane:
         return True
 
     def generate_next_level(self, level):
-
         start = time.time()
         print(f"Generating next level: Level size {len(level)} Current level is {level}")
         lower_level = []
