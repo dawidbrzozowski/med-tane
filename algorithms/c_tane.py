@@ -16,23 +16,23 @@ def replace_element_in_tuple(tup, elementindex, elementval):
     return newtup
 
 
-def add_element_in_tuple(spxminusa, ca):
-    thelist = list(spxminusa)
+def add_element_in_tuple(create_condition_by_sub, ca):
+    thelist = list(create_condition_by_sub)
     thelist.append(ca[0])
     return tuple(thelist)
 
 
-def validcfd(xminusa, x, a, spxminusa, sp, ca):
+def validcfd(xminusa, x, a, create_condition_by_sub, sp, ca):
     global dictpartitions
     if xminusa == '' or a == '':
         return False
     indexofa = x.index(a)
-    newsp0 = add_element_in_tuple(spxminusa, ca)
+    newsp0 = add_element_in_tuple(create_condition_by_sub, ca)
     newsp1 = replace_element_in_tuple(sp, indexofa, ca)  # this is sp, except that in place of value of a we put ca
     if (x, newsp1) in dictpartitions.keys():
-        if len(dictpartitions[(xminusa, spxminusa)]) == len(dictpartitions[(
+        if len(dictpartitions[(xminusa, create_condition_by_sub)]) == len(dictpartitions[(
                 x,
-                newsp1)]):  # and twodlen(dictpartitions[(xminusa, spxminusa)]) == twodlen(dictpartitions[(x, newsp1)]):
+                newsp1)]):  # and twodlen(dictpartitions[(xminusa, create_condition_by_sub)]) == twodlen(dictpartitions[(x, newsp1)]):
             return True
     return False
 
@@ -44,24 +44,24 @@ def twodlen(listoflists):
     return summ
 
 
-def greaterthanorequalto(upxminusa, spxminusa):  # this is actually greaterthan or equal to
-    if upxminusa == spxminusa:
+def greaterthanorequalto(upxminusa, create_condition_by_sub):  # this is actually greaterthan or equal to
+    if upxminusa == create_condition_by_sub:
         return True
     flag = True
     for index in range(0, len(upxminusa)):
-        if not (spxminusa[index] == '--'):
-            if (not (upxminusa[index] == spxminusa[index])):
+        if not (create_condition_by_sub[index] == '--'):
+            if (not (upxminusa[index] == create_condition_by_sub[index])):
                 flag = False
     return flag
 
 
-def doublegreaterthan(upxminusa, spxminusa):
-    if upxminusa == spxminusa:
+def doublegreaterthan(upxminusa, create_condition_by_sub):
+    if upxminusa == create_condition_by_sub:
         return False
     flag = True
     for index in range(0, len(upxminusa)):
-        if (not spxminusa[index] == '--'):
-            if (not (upxminusa[index] == spxminusa[index])):
+        if (not create_condition_by_sub[index] == '--'):
+            if (not (upxminusa[index] == create_condition_by_sub[index])):
                 flag = False
     return flag
 
@@ -75,28 +75,29 @@ def compute_dependencies(level, listofcols):
     for (x, sp) in level:
         for a in x:
             for (att, ca) in dictCplus[(x, sp)]:
-                if att == a:
-                    newtup = spXminusA(sp, x,
-                                       a)  ### tuple(y for y in sp if not sp.index(y)==x.index(a)) # this is sp[X\A]
-                    if validcfd(x.replace(a, ''), x, a, newtup, sp, ca) and not (
-                            [x.replace(a, ''), a, [newtup, ca]] in finallistofCFDs):
-                        finallistofCFDs.append([x.replace(a, ''), a, [newtup, ca]])
-                        for (xx, up) in level:
-                            if xx == x:
-                                newtup0 = spXminusA(up, x,
-                                                    a)  ### tuple(y for y in up if not up.index(y)==x.index(a)) # this is up[X\A]
-                                if up[x.index(a)] == ca[0] and greaterthanorequalto(newtup0, newtup):
-                                    if (a, ca) in dictCplus[(x, up)]: dictCplus[(x, up)].remove((a, ca))
-                                    listofcolscopy = listofcols[:]
-                                    for j in x:  # this loop computes R\X
-                                        if j in listofcolscopy: listofcolscopy.remove(j)
-                                    for b_att in listofcolscopy:  # this loop removes each b in R\X from C+(X,up)
-                                        stufftobedeleted = []
-                                        for (bbval, sometup) in dictCplus[(x, up)]:
-                                            if b_att == bbval:
-                                                stufftobedeleted.append((bbval, sometup))
-                                        for item in stufftobedeleted:
-                                            dictCplus[(x, up)].remove(item)
+                if att != a:
+                    continue
+
+                newtup = create_condition_by_sub(sp, x, a)
+                if validcfd(x.replace(a, ''), x, a, newtup, sp, ca) and not (
+                        [x.replace(a, ''), a, [newtup, ca]] in finallistofCFDs):
+                    finallistofCFDs.append([x.replace(a, ''), a, [newtup, ca]])
+                    for (xx, up) in level:
+                        if xx == x:
+                            newtup0 = create_condition_by_sub(up, x,
+                                                a)  ### tuple(y for y in up if not up.index(y)==x.index(a)) # this is up[X\A]
+                            if up[x.index(a)] == ca[0] and greaterthanorequalto(newtup0, newtup):
+                                if (a, ca) in dictCplus[(x, up)]: dictCplus[(x, up)].remove((a, ca))
+                                listofcolscopy = listofcols[:]
+                                for j in x:  # this loop computes R\X
+                                    if j in listofcolscopy: listofcolscopy.remove(j)
+                                for b_att in listofcolscopy:  # this loop removes each b in R\X from C+(X,up)
+                                    stufftobedeleted = []
+                                    for (bbval, sometup) in dictCplus[(x, up)]:
+                                        if b_att == bbval:
+                                            stufftobedeleted.append((bbval, sometup))
+                                    for item in stufftobedeleted:
+                                        dictCplus[(x, up)].remove(item)
 
     end = time.time()
     print(f"Compute dependencies time: {end - start}")
@@ -124,7 +125,7 @@ def computeCplus(level):
         thesets = []
         for b in x:
             indx = x.index(b)
-            spcopy = spXminusA(sp, x, b)
+            spcopy = create_condition_by_sub(sp, x, b)
             spcopy2 = sp[:]
             if (x.replace(b, ''), spcopy) in dictCplus.keys():
                 temp = dictCplus[(x.replace(b, ''), spcopy)]
@@ -193,35 +194,29 @@ def list_duplicates(seq):
             if len(locs) > 0)
 
 
-def sometuplematchesZUP(z, up):
+def is_subset(z, up):
     global dictpartitions
     global k_suppthreshold
     sumofmatches = 0
     for eqclass in dictpartitions[(z, up)]:
         sumofmatches = sumofmatches + len(eqclass)
-    if sumofmatches >= k_suppthreshold:
-        return True
-    else:
-        return False
 
+    return sumofmatches >= k_suppthreshold
 
 def generate_next_level(level):
 
     start = time.time()
     nextlevel = []
-    for i in range(0, len(level)):  # pick an element
-        for j in range(i + 1, len(level)):  # compare it to every element that comes after it.
-            if ((not level[i][0] == level[j][0]) and level[i][0][0:-1] == level[j][0][0:-1] and level[i][1][0:-1] ==
-                    level[j][1][0:-1]):
+    for i in range(0, len(level)):
+        for j in range(i + 1, len(level)):
+            if level[i][0] != level[j][0] and level[i][0][0:-1] == level[j][0][0:-1] and level[i][1][0:-1] == level[j][1][0:-1]:
                 z = level[i][0] + level[j][0][-1]
                 up = tuple(list(level[i][1]) + [level[j][1][-1]])
-                (z, up) = sortspbasedonx(z, up)
                 partition_product((z, up), level[i], level[j])
-                if sometuplematchesZUP(z, up):
+                if is_subset(z, up):
                     flag = True
                     for att in z:
-                        indexofatt = z.index(att)  # where is att located in z
-                        up_zminusa = spXminusA(up, z, att)
+                        up_zminusa = create_condition_by_sub(up, z, att)
                         zminusa = z.replace(att, '')
                         if not ((zminusa, up_zminusa) in level):
                             flag = False
@@ -233,13 +228,8 @@ def generate_next_level(level):
     return nextlevel
 
 
-def spXminusA(sp, x, a):
-    indexofa = x.index(a)
-    mylist = []
-    for i in range(0, len(sp)):
-        if not i == indexofa:
-            mylist.append(sp[i])
-    return tuple(mylist)
+def create_condition_by_sub(sp, x, a):
+    return tuple(sp[i] for i in range(0, len(sp)) if i != x.index(a))
 
 
 def partition_product(zup, xsp, ytp):
@@ -282,16 +272,6 @@ def partition_product(zup, xsp, ytp):
     total_times += end - start
     total_calls += 1
     print(f"\tpartition_product time: {end - start}")
-
-
-def sortspbasedonx(x, sp):
-    x = list(x)
-    points = zip(x, sp)
-    sorted_points = sorted(points)
-    new_x = [point[0] for point in sorted_points]
-    new_sp = [point[1] for point in sorted_points]
-    return (''.join(new_x), tuple(new_sp))
-
 
 # ------------------------------------------------------- START ---------------------------------------------------
 if len(sys.argv) > 1:
