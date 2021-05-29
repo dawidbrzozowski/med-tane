@@ -8,13 +8,10 @@ import sys
 
 
 def replace_element_in_tuple(tup, elementindex, elementval):
-    if type(elementval) == tuple:
-        elementval = elementval[0]
     newtup = list(tup)
     newtup[elementindex] = elementval
     newtup = tuple(newtup)
     return newtup
-
 
 def add_element_in_tuple(create_condition_by_sub, ca):
     thelist = list(create_condition_by_sub)
@@ -26,15 +23,11 @@ def validcfd(xminusa, x, a, create_condition_by_sub, sp, ca):
     global dictpartitions
     if xminusa == '' or a == '':
         return False
+
     indexofa = x.index(a)
-    newsp0 = add_element_in_tuple(create_condition_by_sub, ca)
-    newsp1 = replace_element_in_tuple(sp, indexofa, ca)  # this is sp, except that in place of value of a we put ca
+    newsp1 = replace_element_in_tuple(sp, indexofa, ca[0])  # this is sp, except that in place of value of a we put ca
     if (x, newsp1) in dictpartitions.keys():
-        if len(dictpartitions[(xminusa, create_condition_by_sub)]) == len(dictpartitions[(
-                x,
-                newsp1)]):  # and twodlen(dictpartitions[(xminusa, create_condition_by_sub)]) == twodlen(dictpartitions[(x, newsp1)]):
-            return True
-    return False
+        return len(dictpartitions[(xminusa, create_condition_by_sub)]) == len(dictpartitions[(x,newsp1)])
 
 
 def twodlen(listoflists):
@@ -69,12 +62,12 @@ def doublegreaterthan(upxminusa, create_condition_by_sub):
 def compute_dependencies(level, listofcols):
 
     start = time.time()
-    global dictCplus
+    global candidates_dict
     global finallistofCFDs
     global listofcolumns
     for (x, sp) in level:
         for a in x:
-            for (att, ca) in dictCplus[(x, sp)]:
+            for (att, ca) in candidates_dict[(x, sp)]:
                 if att != a:
                     continue
 
@@ -87,17 +80,17 @@ def compute_dependencies(level, listofcols):
                             newtup0 = create_condition_by_sub(up, x,
                                                 a)  ### tuple(y for y in up if not up.index(y)==x.index(a)) # this is up[X\A]
                             if up[x.index(a)] == ca[0] and greaterthanorequalto(newtup0, newtup):
-                                if (a, ca) in dictCplus[(x, up)]: dictCplus[(x, up)].remove((a, ca))
+                                if (a, ca) in candidates_dict[(x, up)]: candidates_dict[(x, up)].remove((a, ca))
                                 listofcolscopy = listofcols[:]
                                 for j in x:  # this loop computes R\X
                                     if j in listofcolscopy: listofcolscopy.remove(j)
                                 for b_att in listofcolscopy:  # this loop removes each b in R\X from C+(X,up)
                                     stufftobedeleted = []
-                                    for (bbval, sometup) in dictCplus[(x, up)]:
+                                    for (bbval, sometup) in candidates_dict[(x, up)]:
                                         if b_att == bbval:
                                             stufftobedeleted.append((bbval, sometup))
                                     for item in stufftobedeleted:
-                                        dictCplus[(x, up)].remove(item)
+                                        candidates_dict[(x, up)].remove(item)
 
     end = time.time()
     print(f"Compute dependencies time: {end - start}")
@@ -105,10 +98,10 @@ def compute_dependencies(level, listofcols):
 def prune(level):
 
     start = time.time()
-    global dictCplus
+    global candidates_dict
     stufftobedeleted = []
     for (x, sp) in level:
-        if len(dictCplus[(x, sp)]) == 0:
+        if len(candidates_dict[(x, sp)]) == 0:
             stufftobedeleted.append((x, sp))
     for item in stufftobedeleted:
         level.remove(item)
@@ -116,41 +109,36 @@ def prune(level):
     end = time.time()
     print(f"Compute dependencies time: {end - start}")
 
-def computeCplus(level):
+def generate_c_plus(level):
     start = time.time()
     global listofcolumns
-    global dictCplus
-    listofcols = listofcolumns[:]
+    global candidates_dict
     for (x, sp) in level:
-        thesets = []
-        for b in x:
-            indx = x.index(b)
-            spcopy = create_condition_by_sub(sp, x, b)
-            spcopy2 = sp[:]
-            if (x.replace(b, ''), spcopy) in dictCplus.keys():
-                temp = dictCplus[(x.replace(b, ''), spcopy)]
+        candidates = []
+        for a in x:
+            conditional_x_without_a = (x.replace(a, ''), create_condition_by_sub(sp, x, a))
+            if conditional_x_without_a in candidates_dict.keys():
+                candidates.insert(0, set(candidates_dict[conditional_x_without_a]))
             else:
-                temp = []
-            thesets.insert(0, set(temp))
-        if list(set.intersection(*thesets)) == []:
-            dictCplus[(x, sp)] = []
-        else:
-            dictCplus[(x, sp)] = list(set.intersection(*thesets))
+                candidates = []
+                break
+
+        candidates_dict[(x, sp)] = list(set.intersection(*candidates))
 
     end = time.time()
     print(f"Compute C plus time: {end - start}")
 
 def compute_initial_cplus(level):
     global listofcolumns
-    global dictCplus
-    computeCplus(level)
+    global candidates_dict
+    generate_c_plus(level)
     for (a, ca) in level:
         stufftobedeleted = []
-        for (att, val) in dictCplus[(a, ca)]:
+        for (att, val) in candidates_dict[(a, ca)]:
             if att == a and not val == ca:
                 stufftobedeleted.append((att, val))
         for item in stufftobedeleted:
-            dictCplus[(a, ca)].remove(item)
+            candidates_dict[(a, ca)].remove(item)
 
 
 def populateL1(listofcols):
@@ -179,9 +167,8 @@ def computeAttributePartitions(listofcols):  # compute partitions for every attr
     attributepartitions = {}
     for a in listofcols:
         attributepartitions[a] = []
-        for element in list_duplicates(data2D[
-                                           a].tolist()):  # list_duplicates returns 2-tuples, where 1st is a value, and 2nd is a list of indices where that value occurs
-            if len(element[1]) > 0:  # if >1, then ignore singleton equivalence classes
+        for element in list_duplicates(data2D[a].tolist()):
+            if len(element[1]) > 0:
                 attributepartitions[a].append(element[1])
     return attributepartitions
 
@@ -194,38 +181,51 @@ def list_duplicates(seq):
             if len(locs) > 0)
 
 
-def is_subset(z, up):
+def is_matched_with_threshold(z, up):
     global dictpartitions
     global k_suppthreshold
-    sumofmatches = 0
+    total_matches = 0
     for eqclass in dictpartitions[(z, up)]:
-        sumofmatches = sumofmatches + len(eqclass)
+        total_matches = total_matches + len(eqclass)
+        if total_matches >= k_suppthreshold:
+            return True
 
-    return sumofmatches >= k_suppthreshold
+    return False
+
+
+def append_next_level_if_possible(next_level, level, z, up):
+    flag = True
+    for att in z:
+        up_without_a = create_condition_by_sub(up, z, att)
+        z_without_a = z.replace(att, '')
+        if (z_without_a, up_without_a) not in level:
+            flag = False
+            break
+
+    if flag:
+        next_level.append((z, up))
+
 
 def generate_next_level(level):
 
     start = time.time()
-    nextlevel = []
+    next_level = []
     for i in range(0, len(level)):
         for j in range(i + 1, len(level)):
+
             if level[i][0] != level[j][0] and level[i][0][0:-1] == level[j][0][0:-1] and level[i][1][0:-1] == level[j][1][0:-1]:
                 z = level[i][0] + level[j][0][-1]
-                up = tuple(list(level[i][1]) + [level[j][1][-1]])
+                up = level[i][1] + (level[j][1][-1], )
                 partition_product((z, up), level[i], level[j])
-                if is_subset(z, up):
-                    flag = True
-                    for att in z:
-                        up_zminusa = create_condition_by_sub(up, z, att)
-                        zminusa = z.replace(att, '')
-                        if not ((zminusa, up_zminusa) in level):
-                            flag = False
-                    if flag:
-                        nextlevel.append((z, up))
+
+                if not is_matched_with_threshold(z, up):
+                    continue
+
+                append_next_level_if_possible(next_level, level, z, up)
 
     end = time.time()
     print(f"generate next lvl C plus time: {end - start}")
-    return nextlevel
+    return next_level
 
 
 def create_condition_by_sub(sp, x, a):
@@ -291,7 +291,7 @@ L0 = []
 dictpartitions = {}  # maps 'stringslikethis' to a list of lists, each of which contains indices
 finallistofCFDs = []
 L1 = populateL1(listofcolumns[:])
-dictCplus = {('', ()): L1[:]}
+candidates_dict = {('', ()): L1[:]}
 lvl = 1
 L = [L0, L1]
 
@@ -300,7 +300,7 @@ compute_initial_cplus(L[lvl])
 full_start = time.time()
 while not (L[lvl] == []):
     if lvl > 1:
-        computeCplus(L[lvl])
+        generate_c_plus(L[lvl])
 
     compute_dependencies(L[lvl], listofcolumns[:])
     prune(L[lvl])
