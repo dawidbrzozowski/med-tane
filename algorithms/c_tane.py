@@ -1,6 +1,7 @@
 import time
 from pandas import *
 from collections import defaultdict
+from tqdm import tqdm
 import sys
 
 
@@ -39,6 +40,7 @@ class CTane:
 
         full_start = time.time()
         while not (self.levels[lvl_id] == []):
+            print(f'Generating level {lvl_id}')
             if lvl_id > 1:
                 self.create_candidates_for_level(self.levels[lvl_id])
 
@@ -49,7 +51,7 @@ class CTane:
             lvl_id += 1
 
         full_end = time.time()
-        print(f"Launch fine: {full_end - full_start}")
+        print(f"Launch time: {full_end - full_start}")
         print(f"Result: {self.results}")
         print(f"Number of results: {len(self.results)}")
 
@@ -252,9 +254,9 @@ class CTane:
         attr_hashes = self.attr_hashes(level)
         attr_prefix_hashes = self.attr_prefix_hashes(level)
         cond_prefix_hashes = self.conds_prefix_hashes(level)
-        dummy = 0
 
-        for i in range(0, len(level)):
+        print(f'\nlevel size: {len(level)}')
+        for i in tqdm(range(0, len(level))):
 
             # nie analizuj atrybutow o tej samej wartosci
             attr_value = level[i][0]
