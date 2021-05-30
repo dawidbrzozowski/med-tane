@@ -195,17 +195,88 @@ class CTane:
 
         next_level.append((z, up))
 
+    def attr_hashes(self, level):
+
+        item_count = {}
+        for i in range(0, len(level)):
+            item = level[i][0]
+            if item in item_count.keys():
+                item_count[item].add(i)
+            else:
+                item_count[item] = set()
+                item_count[item].add(i)
+
+        # print('attrs:')
+        # for key, value in item_count.items():
+        #     print(f'{key} ---> {len(value)} ---> {value}')
+
+        return item_count
+
+    def attr_prefix_hashes(self, level):
+
+        item_count = {}
+        for i in range(0, len(level)):
+            item = level[i][0][0:-1]
+            if item in item_count.keys():
+                item_count[item].add(i)
+            else:
+                item_count[item] = set()
+                item_count[item].add(i)
+
+        # print('attrs prefix:')
+        # for key, value in item_count.items():
+        #     print(f'{key} ---> {len(value)} ---> {value}')
+
+        return item_count
+
+    def conds_prefix_hashes(self, level):
+        item_count = {}
+        for i in range(0, len(level)):
+            cond_prefix = level[i][1][0:-1]
+            if cond_prefix in item_count.keys():
+                item_count[cond_prefix].add(i)
+            else:
+                item_count[cond_prefix] = set()
+                item_count[cond_prefix].add(i)
+
+        # print('conds')
+        # for key, value in item_count.items():
+        #     print(f'{key} ---> {len(value)} ---> {value}')
+
+        return item_count
+
     def generate_next_level(self, level):
         start = time.time()
         next_level = []
+
+        attr_hashes = self.attr_hashes(level)
+        attr_prefix_hashes = self.attr_prefix_hashes(level)
+        cond_prefix_hashes = self.conds_prefix_hashes(level)
+        dummy = 0
+
         for i in range(0, len(level)):
-            for j in range(i + 1, len(level)):
 
-                if level[i][0] == level[j][0] or\
-                        level[i][0][0:-1] != level[j][0][0:-1] \
-                        or level[i][1][0:-1] != level[j][1][0:-1]:
-                    continue
+            # nie analizuj atrybutow o tej samej wartosci
+            attr_value = level[i][0]
+            not_used_indexes = attr_hashes[attr_value] | set(range(0, i))
 
+            # analizuj tylko atrybuty o tym samym prefixie wartosci
+            attr_prefix_value = level[i][0][0:-1]
+            potential_val_prefix_indexes = attr_prefix_hashes[attr_prefix_value]
+
+            # analizuj tylko atrybuty o tym samym prefixie warunku
+            # (w kontekscie warunkowych zaleznosci funkcyjnych)
+            cond_prefix_value = level[i][1][0:-1]
+            potential_cond_prefix_indexes = cond_prefix_hashes[cond_prefix_value]
+
+            potential_indexes = potential_cond_prefix_indexes.intersection(potential_val_prefix_indexes)
+            potential_indexes = potential_indexes - not_used_indexes
+
+            if not potential_indexes:
+                continue
+
+            potential_indexes = sorted(potential_indexes)
+            for j in potential_indexes:
                 z = level[i][0] + level[j][0][-1]
                 up = level[i][1] + (level[j][1][-1],)
                 self.partition_product((z, up), level[i], level[j])
