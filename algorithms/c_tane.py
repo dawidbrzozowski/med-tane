@@ -1,14 +1,23 @@
 import time
-
 from pandas import *
 from collections import defaultdict
-import numpy as NP
-import itertools
 import sys
 
 
 class CTaneFileNotFoundError(Exception):
     pass
+
+
+# funkcje pomocnicze
+
+def set_tuple_val_at(item: tuple, index, value):
+    tmp = list(item)
+    tmp[index] = value
+    return tuple(tmp)
+
+
+def set_sub(x, a):
+    return x.replace(a, '')
 
 
 class CTane:
@@ -26,12 +35,12 @@ class CTane:
 
     def run(self):
         lvl_id = 1
-        self.compute_initial_cplus(self.levels[lvl_id])
+        self.init_candidates(self.levels[lvl_id])
 
         full_start = time.time()
         while not (self.levels[lvl_id] == []):
             if lvl_id > 1:
-                self.generate_c_plus(self.levels[lvl_id])
+                self.create_candidates_for_level(self.levels[lvl_id])
 
             self.compute_dependencies(self.levels[lvl_id])
             self.levels[lvl_id] = self.prune(self.levels[lvl_id])
@@ -40,26 +49,16 @@ class CTane:
             lvl_id += 1
 
         full_end = time.time()
-        print(f"Total time: {full_end - full_start}")
-        print(f"List of all CFDs: {self.results}")
-        print(f"Total number of CFDs found: {len(self.results)}")
-
-    def replace_element_in_tuple(self, tup, id, val):
-        tmp = list(tup)
-        tmp[id] = val
-        return tuple(tmp)
-
-    def set_tuple_val_at(self, item: tuple, index, value):
-        tmp = list(item)
-        tmp[index] = value
-        return tuple(tmp)
+        print(f"Launch fine: {full_end - full_start}")
+        print(f"Result: {self.results}")
+        print(f"Number of results: {len(self.results)}")
 
     def get_new_condition_if_dependant(self, x, a, sp, ca):
-        x_without_a = (self.set_sub(x, a))
+        x_without_a = (set_sub(x, a))
         if not a or not x_without_a:
             return False
 
-        sp_with_ca = self.set_tuple_val_at(sp, x.index(a), ca[0])
+        sp_with_ca = set_tuple_val_at(sp, x.index(a), ca[0])
         new_condition = self.create_condition_by_sub(sp, x, a)
         if (x, sp_with_ca) in self.partitions.keys():
             if len(self.partitions[x_without_a, new_condition]) == len(self.partitions[(x, sp_with_ca)]):
@@ -75,7 +74,6 @@ class CTane:
 
         return new_columns
 
-
     def generate_new_candidates(self, attribute, x, cond, dep_to_remove: tuple):
         new_candidates = []
         for (candidate_attribute, candidate_condition) in self.candidates_dict[(x, cond)]:
@@ -84,14 +82,13 @@ class CTane:
 
         return new_candidates
 
-    def get_candidates_with_value(self, candidates, x):
+    @staticmethod
+    def get_candidates_with_value(candidates, x):
         return [item for a in x for item in candidates if a in item[0]]
 
-    def get_matching_candidates_in_level(self, level, x):
+    @staticmethod
+    def get_matching_candidates_in_level(level, x):
         return [item for item in level if x == item[0]]
-
-    def set_sub(self, x, a):
-        return x.replace(a, '')
 
     def get_candidate(self, x, cond):
         return self.candidates_dict[(x, cond)]
@@ -106,7 +103,7 @@ class CTane:
                 if not new_cond:
                     continue
 
-                self.results.append([self.set_sub(x, attr), attr, [new_cond, ca]])
+                self.results.append([set_sub(x, attr), attr, [new_cond, ca]])
                 for (_, matching_candidate_condition) in self.get_matching_candidates_in_level(level, x):
 
                     if matching_candidate_condition[x.index(attr)] == ca[0] \
@@ -114,7 +111,8 @@ class CTane:
 
                         for column_without_x in self.generate_columns_without_x(x):
                             self.candidates_dict[(x, matching_candidate_condition)] = \
-                                self.generate_new_candidates(column_without_x, x, matching_candidate_condition, (attr, ca))
+                                self.generate_new_candidates(column_without_x, x, matching_candidate_condition,
+                                                             (attr, ca))
 
         end = time.time()
         print(f"Compute dependencies time: {end - start}")
@@ -131,7 +129,7 @@ class CTane:
 
         return new_level
 
-    def generate_c_plus(self, level):
+    def create_candidates_for_level(self, level):
         start = time.time()
         for (x, sp) in level:
             candidates = []
@@ -140,7 +138,7 @@ class CTane:
                 if conditional_x_without_a in self.candidates_dict.keys():
                     candidates.insert(0, set(self.candidates_dict[conditional_x_without_a]))
                 else:
-                    candidates = []
+                    self.candidates_dict[(x, sp)] = []
                     break
 
             self.candidates_dict[(x, sp)] = list(set.intersection(*candidates))
@@ -148,15 +146,15 @@ class CTane:
         end = time.time()
         print(f"Compute C plus time: {end - start}")
 
-    def compute_initial_cplus(self, level):
-        self.generate_c_plus(level)
+    def init_candidates(self, level):
+        self.create_candidates_for_level(level)
         for (a, ca) in level:
-            stufftobedeleted = []
+            new_candidates = []
             for (att, val) in self.candidates_dict[(a, ca)]:
-                if att == a and not val == ca:
-                    stufftobedeleted.append((att, val))
-            for item in stufftobedeleted:
-                self.candidates_dict[(a, ca)].remove(item)
+                if att != a or val == ca:
+                    new_candidates.append((att, val))
+
+            self.candidates_dict[(a, ca)] = new_candidates
 
     def set_attr_in_level(self, columns):
         l1 = []
@@ -165,10 +163,10 @@ class CTane:
             l1.append((a, ('--',)))
             for attr in attrs[a]:
                 l1.append((a, (str(self.data.iloc[attr[0]][a]),)))
-        self.initialise_partitiions(l1, attrs)
+        self.init_partitions(l1, attrs)
         return l1
 
-    def initialise_partitiions(self, level1, attrs):
+    def init_partitions(self, level1, attrs):
         for (a, sp) in level1:
             self.partitions[(a, sp)] = []
             self.partitions[(a, sp)] = attrs[a]
@@ -189,16 +187,13 @@ class CTane:
         return ((key, locs) for key, locs in tally.items() if len(locs) > 0)
 
     def append_next_level_if_possible(self, next_level, level, z, up):
-        flag = True
         for att in z:
             up_without_a = self.create_condition_by_sub(up, z, att)
             z_without_a = z.replace(att, '')
             if (z_without_a, up_without_a) not in level:
-                flag = False
-                break
+                return
 
-        if flag:
-            next_level.append((z, up))
+        next_level.append((z, up))
 
     def generate_next_level(self, level):
         start = time.time()
@@ -206,11 +201,15 @@ class CTane:
         for i in range(0, len(level)):
             for j in range(i + 1, len(level)):
 
-                if level[i][0] != level[j][0] and level[i][0][0:-1] == level[j][0][0:-1] and level[i][1][0:-1] == level[j][1][0:-1]:
-                    z = level[i][0] + level[j][0][-1]
-                    up = level[i][1] + (level[j][1][-1], )
-                    self.partition_product((z, up), level[i], level[j])
-                    self.append_next_level_if_possible(next_level, level, z, up)
+                if level[i][0] == level[j][0] or\
+                        level[i][0][0:-1] != level[j][0][0:-1] \
+                        or level[i][1][0:-1] != level[j][1][0:-1]:
+                    continue
+
+                z = level[i][0] + level[j][0][-1]
+                up = level[i][1] + (level[j][1][-1],)
+                self.partition_product((z, up), level[i], level[j])
+                self.append_next_level_if_possible(next_level, level, z, up)
 
         end = time.time()
         print(f"generate next lvl C plus time: {end - start}")
@@ -247,7 +246,6 @@ class CTane:
                 self.table_t[t] = None
 
 
-
 def main():
     if len(sys.argv) <= 1:
         raise CTaneFileNotFoundError('No input file provided')
@@ -259,4 +257,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
