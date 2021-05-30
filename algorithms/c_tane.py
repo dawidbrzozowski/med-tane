@@ -4,6 +4,8 @@ from collections import defaultdict
 from tqdm import tqdm
 import sys
 
+from tqdm import tqdm
+
 
 class CTaneFileNotFoundError(Exception):
     pass
