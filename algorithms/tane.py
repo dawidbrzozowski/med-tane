@@ -4,6 +4,8 @@ from collections import defaultdict
 import click
 import pandas as pd
 from click import STRING
+from tqdm import tqdm
+
 import visualisation as vis
 from string import ascii_uppercase
 
@@ -177,7 +179,6 @@ class Tane:
         return candidate_sets
 
     def prune(self, level):
-
         start = time.time()
         print(f"Pruning: Level size {len(level)} Current level is {level}")
 
@@ -204,7 +205,7 @@ class Tane:
                 level.remove(x)
 
         end = time.time()
-        print(f"Pruning end Time:{end-start}")
+        print(f"Pruning: Prunned level size {len(level)}")
 
     def generate_prefix_block(self, level):
         prefix_block = []
@@ -226,14 +227,13 @@ class Tane:
         return True
 
     def generate_next_level(self, level):
-
         start = time.time()
         print(f"Generating next level: Level size {len(level)} Current level is {level}")
         lower_level = []
         # w naszej implementacji prefix_blocks juz nie zawieraja y == z
         prefix_blocks = self.generate_prefix_block(level)
-        for k in prefix_blocks:
-            y, z = k
+        for i in tqdm(range(0, len(prefix_blocks))):
+            y, z = prefix_blocks[i]
             # poniewaz y i z naleza do prefix_block, to sa identyczne na l-1 pozycjach
             x = y + z[-1]
             if self.is_in_next_level(x, level):
@@ -319,7 +319,7 @@ def main(input_file: STRING):
     end = time.time()
     print(f"Runtime of Tane is {end - start}")
 
-    visualiser = vis.Visualiser(tane.get_final_list_of_all_dependencies())
+    # visualiser = vis.Visualiser(tane.get_final_list_of_all_dependencies())
 
 
 if __name__ == '__main__':
