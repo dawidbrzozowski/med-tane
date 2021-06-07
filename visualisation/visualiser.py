@@ -16,6 +16,7 @@ class Visualiser:
             c.attr(color='blue')
             c.node_attr['style'] = 'filled'
             c.node('{}', '{}')
+            c.attr(label='Zbiór pusty')
 
         for id, val in enumerate(unique_nodes):
             attr_num = self._get_number_of_elements_in_set(val)
@@ -23,6 +24,7 @@ class Visualiser:
                 c.attr(color='blue')
                 c.node_attr['style'] = 'filled'
                 c.node(val, val)
+                c.attr(label='Zbiory o liczności ' + str(attr_num))
 
     def _get_number_of_elements_in_set(self, set):
         return set.count(',') + 1 if set else 0
