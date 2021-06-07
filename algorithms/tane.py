@@ -319,7 +319,7 @@ def main(input_file: STRING):
     end = time.time()
     print(f"Runtime of Tane is {end - start}")
 
-    # visualiser = vis.Visualiser(tane.get_final_list_of_all_dependencies())
+    visualiser = vis.Visualiser(tane.get_final_list_of_all_dependencies())
 
 
 if __name__ == '__main__':
